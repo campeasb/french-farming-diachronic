@@ -123,7 +123,7 @@ export const SauPieChart = ({ data, sauDeptData }: SauPieChartProps) => {
     const legendWidth = Math.min(250, width * 0.35);
     const chartAreaWidth = width - legendWidth;
     const chartSize = Math.min(chartAreaWidth, height - 40);
-    const outerRadius = chartSize / 2 - 10;
+    const outerRadius = (chartSize / 2 - 10) * 0.9;
     const innerRadius = outerRadius * 0.6;
     const cx = chartAreaWidth / 2;
     const cy = height / 2;
