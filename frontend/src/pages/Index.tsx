@@ -122,7 +122,7 @@ const Index = () => {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Répartition SAU
+            {indicator === 'sau' ? 'Répartition SAU' : 'Répartition exploitations'}
             {activeTab === 'repartition' && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
             )}
@@ -132,7 +132,7 @@ const Index = () => {
         {/* Tab content */}
         {activeTab === 'carte' ? (
           <>
-            <div className={`relative overflow-hidden transition-all duration-500 ${(selectedRegion || selectedDepartment) ? 'h-[55vh]' : 'flex-1'}`}>
+            <div className={`relative overflow-hidden transition-all duration-500 ${(selectedRegion || selectedDepartment) && indicator === 'sau' ? 'h-[55vh]' : 'flex-1'}`}>
               <FranceMap data={effectiveData!} />
 
               {/* Legend */}
@@ -145,7 +145,7 @@ const Index = () => {
               <Tooltip />
             </div>
 
-            {selectedRegion && sauData && (() => {
+            {selectedRegion && sauData && indicator === 'sau' && (() => {
               const regionSau = sauData.regions.find(r => r.code === selectedRegion);
               if (!regionSau) return null;
               return (
@@ -155,7 +155,7 @@ const Index = () => {
               );
             })()}
 
-            {selectedDepartment && sauDeptData && (() => {
+            {selectedDepartment && sauDeptData && indicator === 'sau' && (() => {
               const deptSau = sauDeptData.departments.find(d => d.code === selectedDepartment);
               if (!deptSau) return null;
               return (

@@ -1,5 +1,16 @@
 import type { RA2020Data, RegionData, DepartmentData, SizeFilter, Indicator, SauClass, SauByRegionYearData, SauByDepartmentYearData } from '@/types/data';
 
+// Overseas regions (DOM) not shown on the metropolitan map
+const OVERSEAS_REGION_CODES = new Set(['01', '02', '03', '04', '06']);
+export const isMetropolitan = (area: RegionData | DepartmentData): boolean => {
+  if ('region_name' in area) {
+    // department: overseas codes start with 97
+    return !area.code.startsWith('97');
+  }
+  // region
+  return !OVERSEAS_REGION_CODES.has(area.code);
+};
+
 export const getValueForArea = (
   area: RegionData | DepartmentData,
   indicator: Indicator,
@@ -19,8 +30,8 @@ export const getDataRange = (
   indicator: Indicator,
   sizeFilter: SizeFilter
 ): [number, number] => {
-  const areas = level === 'regions' ? data.regions : data.departments;
-  
+  const areas = (level === 'regions' ? data.regions : data.departments).filter(isMetropolitan);
+
   const values = areas.map(area => getValueForArea(area, indicator, sizeFilter));
   const validValues = values.filter(v => v > 0);
   
@@ -35,8 +46,8 @@ export const calculateStats = (
   indicator: Indicator,
   sizeFilter: SizeFilter
 ) => {
-  const areas = level === 'regions' ? data.regions : data.departments;
-  
+  const areas = (level === 'regions' ? data.regions : data.departments).filter(isMetropolitan);
+
   const values = areas.map(area => ({
     name: 'name' in area ? area.name : area.code,
     value: getValueForArea(area, indicator, sizeFilter)

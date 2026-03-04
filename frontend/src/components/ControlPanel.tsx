@@ -12,12 +12,7 @@ import { MapIcon, BarChart3, Layers, ChevronLeft, ChevronRight, Calendar } from 
 import { Button } from '@/components/ui/button';
 import type { Indicator, SizeFilter, MapLevel } from '@/types/data';
 
-const indicators: { value: Indicator; label: string }[] = [
-  { value: 'nb_exploitations', label: "Nombre d'exploitations" },
-  { value: 'sau', label: 'SAU (hectares)' },
-];
-
-const years = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024];
+const years = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024];
 
 const sizeFilters: { value: SizeFilter; label: string }[] = [
   { value: 'all', label: 'Toutes tailles' },
@@ -71,7 +66,7 @@ export const ControlPanel = () => {
               <h1 className="font-display text-xl font-bold">Recensement Agricole</h1>
             </div>
             <p className="text-sm text-muted-foreground">
-              Données {selectedYear ?? 2020}{!selectedYear && ' (Recensement)'} • Agreste
+              Données {selectedYear !== null ? `${selectedYear} (SAA)` : '2020 (Recensement)'} • Agreste
             </p>
           </div>
 
@@ -125,18 +120,42 @@ export const ControlPanel = () => {
               <BarChart3 className="h-4 w-4 text-accent" />
               Indicateur
             </Label>
-            <Select value={indicator} onValueChange={(v) => setIndicator(v as Indicator)}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {indicators.map((ind) => (
-                  <SelectItem key={ind.value} value={ind.value}>
-                    {ind.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <RadioGroup
+              value={indicator}
+              onValueChange={(value) => setIndicator(value as Indicator)}
+              className="flex gap-2"
+            >
+              <div className="flex-1">
+                <RadioGroupItem
+                  value="nb_exploitations"
+                  id="nb_exploitations"
+                  className="peer sr-only"
+                />
+                <Label
+                  htmlFor="nb_exploitations"
+                  className="flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-lg border-2 border-border cursor-pointer transition-all
+                    peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-secondary peer-data-[state=checked]:text-primary
+                    hover:bg-muted text-center leading-tight"
+                >
+                  Exploitations
+                </Label>
+              </div>
+              <div className="flex-1">
+                <RadioGroupItem
+                  value="sau"
+                  id="sau"
+                  className="peer sr-only"
+                />
+                <Label
+                  htmlFor="sau"
+                  className="flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-lg border-2 border-border cursor-pointer transition-all
+                    peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-secondary peer-data-[state=checked]:text-primary
+                    hover:bg-muted text-center leading-tight"
+                >
+                  SAU (ha)
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
 
           {/* Year selector (SAU only) */}
@@ -157,7 +176,7 @@ export const ControlPanel = () => {
                   <SelectItem value="census">2020 (Recensement)</SelectItem>
                   {years.map((y) => (
                     <SelectItem key={y} value={String(y)}>
-                      {y}
+                      {y} (SAA)
                     </SelectItem>
                   ))}
                 </SelectContent>

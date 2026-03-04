@@ -133,11 +133,11 @@
   .legend-gradient {
     background: linear-gradient(
       to top,
-      hsl(100 50% 95%),
-      hsl(100 45% 85%),
-      hsl(100 40% 60%),
-      hsl(100 50% 35%),
-      hsl(100 60% 18%)
+      #e0f5ee,
+      #9dd5bf,
+      #5ab59a,
+      #2d8b6c,
+      #1a6350
     );
   }
 

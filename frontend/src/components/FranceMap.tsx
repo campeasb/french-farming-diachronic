@@ -6,6 +6,7 @@ import { createColorScale } from '@/utils/colorScales';
 import { getValueForArea, getDataRange } from '@/utils/dataUtils';
 import type { RA2020Data, RegionData, DepartmentData } from '@/types/data';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/sonner';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
 interface FranceMapProps {
@@ -131,7 +132,7 @@ export const FranceMap = ({ data }: FranceMapProps) => {
           (level === 'departments' && selectedDepartment === code);
         return isSelected ? 3 : level === 'regions' ? 1.5 : 0.5;
       })
-      .attr('cursor', 'pointer')
+      .attr('cursor', indicator === 'nb_exploitations' ? 'default' : 'pointer')
       .style('transition', 'fill 0.2s ease, stroke-width 0.2s ease')
       .on('mouseenter', function(event: MouseEvent, d: any) {
         d3.select(this)
@@ -185,7 +186,14 @@ export const FranceMap = ({ data }: FranceMapProps) => {
           .attr('stroke-width', isSelected ? 3 : (level === 'regions' ? 1.5 : 0.5));
         setTooltip(null);
       })
-      .on('click', (event: MouseEvent, d: any) => {
+      .on('click', (_event: MouseEvent, d: any) => {
+        if (indicator === 'nb_exploitations') {
+          toast("Détail non disponible", {
+            description: "L'évolution temporelle n'est disponible que pour l'indicateur SAU.",
+            duration: 3000,
+          });
+          return;
+        }
         const code = d.properties.code;
         if (level === 'regions') {
           const current = useAppStore.getState().selectedRegion;
