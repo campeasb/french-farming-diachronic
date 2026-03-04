@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import { formatHectares, formatNumberFull } from '@/utils/colorScales';
+import { formatNumberFull } from '@/utils/colorScales';
 import type { SauRegionYear } from '@/types/data';
 
 interface SauChartProps {
@@ -38,9 +38,18 @@ export const SauChart = ({ regionData }: SauChartProps) => {
 
     if (width <= 0 || height <= 0) return;
 
-    const entries = Object.entries(regionData.sau_by_year)
+    const rawEntries = Object.entries(regionData.sau_by_year)
       .map(([year, sau]) => ({ year: +year, sau }))
       .sort((a, b) => a.year - b.year);
+
+    const base2016 = rawEntries.find(d => d.year === 2016)?.sau;
+    if (!base2016 || base2016 === 0) return;
+
+    const entries = rawEntries.map(d => ({
+      year: d.year,
+      sau: d.sau,
+      pct: (d.sau / base2016) * 100,
+    }));
 
     const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
@@ -49,11 +58,9 @@ export const SauChart = ({ regionData }: SauChartProps) => {
       .domain(d3.extent(entries, d => d.year) as [number, number])
       .range([0, width]);
 
-    const yMin = d3.min(entries, d => d.sau)!;
-    const yMax = d3.max(entries, d => d.sau)!;
-    const yPadding = (yMax - yMin) * 0.1 || yMax * 0.05;
+    const yMin = d3.min(entries, d => d.pct)!;
     const y = d3.scaleLinear()
-      .domain([yMin - yPadding, yMax + yPadding])
+      .domain([Math.max(0, yMin - 3), 105])
       .range([height, 0]);
 
     // Grid lines
@@ -63,6 +70,14 @@ export const SauChart = ({ regionData }: SauChartProps) => {
       .call(g => g.selectAll('.tick line').attr('stroke', '#e5e7eb').attr('stroke-dasharray', '3,3'))
       .call(g => g.select('.domain').remove());
 
+    // 100% reference line
+    g.append('line')
+      .attr('x1', 0).attr('x2', width)
+      .attr('y1', y(100)).attr('y2', y(100))
+      .attr('stroke', '#9ca3af')
+      .attr('stroke-dasharray', '4,3')
+      .attr('stroke-width', 1);
+
     // X axis
     g.append('g')
       .attr('transform', `translate(0,${height})`)
@@ -70,16 +85,16 @@ export const SauChart = ({ regionData }: SauChartProps) => {
       .call(g => g.select('.domain').attr('stroke', '#9ca3af'))
       .call(g => g.selectAll('.tick text').attr('fill', '#6b7280').style('font-size', '12px'));
 
-    // Y axis
+    // Y axis (%)
     g.append('g')
-      .call(d3.axisLeft(y).ticks(5).tickFormat(d => formatHectares(d as number)))
+      .call(d3.axisLeft(y).ticks(5).tickFormat(d => `${(d as number).toFixed(0)}%`))
       .call(g => g.select('.domain').attr('stroke', '#9ca3af'))
       .call(g => g.selectAll('.tick text').attr('fill', '#6b7280').style('font-size', '12px'));
 
     // Line
-    const line = d3.line<{ year: number; sau: number }>()
+    const line = d3.line<{ year: number; sau: number; pct: number }>()
       .x(d => x(d.year))
-      .y(d => y(d.sau))
+      .y(d => y(d.pct))
       .curve(d3.curveMonotoneX);
 
     g.append('path')
@@ -95,7 +110,7 @@ export const SauChart = ({ regionData }: SauChartProps) => {
       .join('circle')
       .attr('class', 'dot')
       .attr('cx', d => x(d.year))
-      .attr('cy', d => y(d.sau))
+      .attr('cy', d => y(d.pct))
       .attr('r', 5)
       .attr('fill', 'hsl(100, 56%, 35%)')
       .attr('stroke', 'white')
@@ -116,11 +131,11 @@ export const SauChart = ({ regionData }: SauChartProps) => {
     dots
       .on('mouseenter', function (_event, d) {
         d3.select(this).attr('r', 7);
-        const label = `${formatNumberFull(d.sau)} ha`;
+        const label = `${d.pct.toFixed(1)}% (${formatNumberFull(d.sau)} ha)`;
         tooltipText.text(label);
         const bbox = (tooltipText.node() as SVGTextElement).getBBox();
         const px = x(d.year);
-        const py = y(d.sau) - 16;
+        const py = y(d.pct) - 16;
         tooltipRect
           .attr('x', px - bbox.width / 2 - 6)
           .attr('y', py - bbox.height - 4)
@@ -142,7 +157,7 @@ export const SauChart = ({ regionData }: SauChartProps) => {
       .attr('fill', 'hsl(100, 20%, 25%)')
       .attr('font-size', '15px')
       .attr('font-weight', '600')
-      .text(`SAU - ${regionData.name} (2016-2024)`);
+      .text(`SAU - ${regionData.name} (% vs 2016)`);
 
   }, [regionData, dimensions]);
 

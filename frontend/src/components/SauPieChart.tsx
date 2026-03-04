@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
 import { useAppStore } from '@/stores/useAppStore';
-import { getValueForArea } from '@/utils/dataUtils';
+import { getValueForArea, isMetropolitan } from '@/utils/dataUtils';
 import { formatNumberFull } from '@/utils/colorScales';
 import type { RA2020Data, SauByDepartmentYearData } from '@/types/data';
 import { Button } from '@/components/ui/button';
@@ -59,14 +59,14 @@ export const SauPieChart = ({ data, sauDeptData }: SauPieChartProps) => {
   // Build slice data
   const slices = useMemo((): SliceData[] => {
     if (drillRegion) {
-      const depts = data.departments.filter(d => d.region_name === drillRegion.name);
+      const depts = data.departments.filter(d => d.region_name === drillRegion.name && isMetropolitan(d));
       return depts.map(d => ({
         code: d.code,
         name: deptNameMap.get(d.code) || d.code,
         value: getValueForArea(d, indicator, sizeFilter),
       })).filter(s => s.value > 0);
     }
-    return data.regions.map(r => ({
+    return data.regions.filter(isMetropolitan).map(r => ({
       code: r.code,
       name: r.name,
       value: getValueForArea(r, indicator, sizeFilter),
@@ -95,11 +95,10 @@ export const SauPieChart = ({ data, sauDeptData }: SauPieChartProps) => {
       result.push({ code: '__autres__', name: 'Autres', value: autresValue });
     }
 
-    // Red→Yellow gradient: index 0 (largest) = red, last = yellow
-    const colorScale = d3.scaleLinear<string>()
+    // Viridis sequential scale: index 0 (largest) = dark purple, last = yellow
+    const colorScale = d3.scaleSequential()
       .domain([0, Math.max(big.length - 1, 1)])
-      .range(['#e03030', '#f5d020'])
-      .interpolate(d3.interpolateHsl);
+      .interpolator(d3.interpolateViridis);
 
     const cMap = new Map<string, string>();
     result.forEach((s, i) => {
@@ -120,7 +119,7 @@ export const SauPieChart = ({ data, sauDeptData }: SauPieChartProps) => {
 
     const { width, height } = dimensions;
 
-    const legendWidth = Math.min(250, width * 0.35);
+    const legendWidth = Math.min(290, width * 0.42);
     const chartAreaWidth = width - legendWidth;
     const chartSize = Math.min(chartAreaWidth, height - 40);
     const outerRadius = (chartSize / 2 - 10) * 0.9;
@@ -240,12 +239,14 @@ export const SauPieChart = ({ data, sauDeptData }: SauPieChartProps) => {
         .attr('fill', colorMap.get(s.code) || '#ccc');
 
       const pct = ((s.value / total) * 100).toFixed(1);
+      const maxNameLen = 22;
+      const displayName = s.name.length > maxNameLen ? s.name.substring(0, maxNameLen - 1) + '…' : s.name;
       row.append('text')
         .attr('x', 20)
         .attr('y', 11)
         .attr('fill', 'hsl(0, 0%, 30%)')
         .attr('font-size', '12px')
-        .text(`${s.name} (${pct}%)`);
+        .text(`${displayName} (${pct}%)`);
     });
 
   }, [displaySlices, colorMap, dimensions, drillRegion, indicator]);
