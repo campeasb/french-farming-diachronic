@@ -41,7 +41,7 @@ export const SankeyChart = ({ data }: SankeyChartProps) => {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isolatedRegion, setIsolatedRegion] = useState<string | null>(null);
 
-  const { indicator, selectedYear } = useAppStore();
+  const { indicator } = useAppStore();
 
   // ResizeObserver for responsive sizing
   useEffect(() => {
@@ -118,25 +118,41 @@ export const SankeyChart = ({ data }: SankeyChartProps) => {
     const tooltipEl = tooltipRef.current;
 
     const { width, height } = dimensions;
-    const margin = { top: 50, right: 160, bottom: 20, left: 160 };
+    const margin = { top: 50, right: 160, bottom: 20, left: 240 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
     if (innerWidth <= 0 || innerHeight <= 0) return;
 
     // Deep clone to avoid d3-sankey mutation issues
-    const nodes = sankeyData.nodes.map(n => ({ ...n }));
+    const allNodes = sankeyData.nodes.map(n => ({ ...n }));
     const allLinks = sankeyData.links.map(l => ({ ...l }));
 
-    // Filter links if a region is isolated
-    const filteredLinks = isolatedRegion
-      ? allLinks.filter(l => {
-          const sourceNode = nodes[l.source as number];
-          return sourceNode && sourceNode.id === `region-${isolatedRegion}`;
-        })
-      : allLinks;
+    // Filter links & nodes if a region is isolated
+    let filteredNodes: typeof allNodes;
+    let filteredLinks: typeof allLinks;
+
+    if (isolatedRegion) {
+      const isoId = `region-${isolatedRegion}`;
+      filteredLinks = allLinks.filter(l => {
+        const sourceNode = allNodes[l.source as number];
+        return sourceNode && sourceNode.id === isoId;
+      });
+      // Only keep the isolated region node + class nodes that have links
+      const targetIndices = new Set(filteredLinks.map(l => l.target as number));
+      filteredNodes = allNodes.filter((n, i) =>
+        n.id === isoId || (n.type === 'class' && targetIndices.has(i))
+      );
+    } else {
+      filteredNodes = allNodes;
+      filteredLinks = allLinks;
+    }
 
     if (filteredLinks.length === 0) return;
+
+    // Build index map from original index → node id
+    const origIndexToId = new Map<number, string>();
+    allNodes.forEach((n, i) => origIndexToId.set(i, n.id));
 
     // d3-sankey layout
     const sankeyLayout = d3Sankey<SankeyNode, SankeyLink>()
@@ -146,37 +162,34 @@ export const SankeyChart = ({ data }: SankeyChartProps) => {
       .nodeAlign(sankeyJustify)
       .extent([[0, 0], [innerWidth, innerHeight]]);
 
-    // Build graph with node references by id
-    const nodeMap = new Map<string, any>();
-    const graphNodes = nodes.map(n => {
-      const gn = { ...n };
-      nodeMap.set(n.id, gn);
-      return gn;
-    });
+    // Build graph nodes & links using string ids
+    const graphNodes = filteredNodes.map(n => ({ ...n }));
     const graphLinks = filteredLinks.map(l => ({
       ...l,
-      source: graphNodes[l.source as number].id,
-      target: graphNodes[l.target as number].id,
-    }));
+      source: origIndexToId.get(l.source as number)!,
+      target: origIndexToId.get(l.target as number)!,
+    })) as any[];
 
     let graph: any;
     try {
       graph = sankeyLayout({
         nodes: graphNodes,
-        links: graphLinks,
+        links: graphLinks as any,
       });
     } catch {
       return;
     }
 
-    // Color scales
-    const regionColors = d3.scaleOrdinal<string>()
-      .domain(nodes.filter(n => n.type === 'region').map(n => n.id))
-      .range(d3.schemeTableau10);
+    // Color scales — match pie chart (viridis) for regions, map greens for classes
+    const regionNodeIds = allNodes.filter(n => n.type === 'region').map(n => n.id);
+    const regionColorScale = d3.scaleSequential()
+      .domain([0, Math.max(regionNodeIds.length - 1, 1)])
+      .interpolator(d3.interpolateViridis);
+    const regionColors = (id: string) => regionColorScale(regionNodeIds.indexOf(id));
 
     const classColorScale = d3.scaleSequential()
       .domain([0, SAU_CLASSES.length - 1])
-      .interpolator(d3.interpolateGreens);
+      .interpolator(d3.interpolate('#e0f5ee', '#1a6350'));
 
     const getNodeColor = (node: any) => {
       if (node.type === 'class') {
