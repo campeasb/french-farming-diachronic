@@ -6,6 +6,7 @@ import { Tooltip } from '@/components/Tooltip';
 import { StatsPanel } from '@/components/StatsPanel';
 import { SauChart } from '@/components/SauChart';
 import { SauPieChart } from '@/components/SauPieChart';
+import { SankeyChart } from '@/components/SankeyChart';
 import { useAppStore } from '@/stores/useAppStore';
 import { getDataRange, calculateStats, buildDataForYear } from '@/utils/dataUtils';
 import type { RA2020Data, SauByRegionYearData, SauByDepartmentYearData } from '@/types/data';
@@ -18,7 +19,7 @@ const Index = () => {
   const [sauDeptData, setSauDeptData] = useState<SauByDepartmentYearData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'carte' | 'repartition'>('carte');
+  const [activeTab, setActiveTab] = useState<'carte' | 'repartition' | 'sankey'>('carte');
 
   useEffect(() => {
     Promise.all([
@@ -122,6 +123,19 @@ const Index = () => {
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
             )}
           </button>
+          <button
+            onClick={() => setActiveTab('sankey')}
+            className={`px-5 py-2.5 text-sm font-medium transition-colors relative ${
+              activeTab === 'sankey'
+                ? 'text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Flux par taille
+            {activeTab === 'sankey' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
         </div>
 
         {activeTab === 'carte' ? (
@@ -154,9 +168,13 @@ const Index = () => {
               );
             })()}
           </>
-        ) : (
+        ) : activeTab === 'repartition' ? (
           <div className="flex-1 overflow-hidden">
             <SauPieChart data={effectiveData!} sauDeptData={sauDeptData} />
+          </div>
+        ) : (
+          <div className="flex-1 overflow-hidden">
+            <SankeyChart data={effectiveData!} />
           </div>
         )}
       </main>
