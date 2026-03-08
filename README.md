@@ -1,6 +1,8 @@
 # Recensement Agricole France — Visualisation Diachronique
 
-**Démo en ligne :** [french-farming-diachronic.vercel.app](https://french-farming-diachronic.vercel.app/)
+![Croquis du projet](croquis.png)
+
+**Application déployée en production :** [french-farming-diachronic.vercel.app](https://french-farming-diachronic.vercel.app/)
 
 ---
 
@@ -72,12 +74,17 @@ Trois onglets de visualisation :
 
 ## Lancer en local
 
+Nous avons fait un makefile pour rendre l'installation et le développement plus simple.
+
 ```bash
+# help
+make help
+
 # Installer les dépendances
-npm install
+make install
 
 # Lancer le serveur de développement (port 8080)
-npm run dev
+make dev
 ```
 
 > Requiert Node.js 18+
